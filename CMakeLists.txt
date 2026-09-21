@@ -420,9 +420,7 @@ set (SOURCES
 
 if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     list(REMOVE_ITEM SOURCES
-        "${PROJECT_SOURCE_DIR}/src/imgui/imgui_impl_sdl2_custom.cpp"
         "${PROJECT_SOURCE_DIR}/src/contrib/imgui/imgui_demo.cpp"
-        "${PROJECT_SOURCE_DIR}/src/contrib/im3d/im3d.cpp"
         "${PROJECT_SOURCE_DIR}/src/contrib/implot/implot_demo.cpp"
     )
 endif()
