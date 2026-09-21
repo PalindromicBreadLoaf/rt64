@@ -82,6 +82,11 @@ namespace RT64 {
     void ApplicationWindow::setup(const char *windowTitle, Listener *listener) {
         assert(windowTitle != nullptr);
 
+#   if defined(__SWITCH__)
+        (void)listener;
+        assert(false && "RT64 cannot create its own window on Horizon.");
+#   else
+
         // Find the right window dimension and placement.
         const int Width = 1280;
         const int Height = 720;
@@ -169,6 +174,7 @@ namespace RT64 {
 #   else
         setup(windowHandle, listener, pthread_self());
 #   endif
+#   endif
     }
 
     void ApplicationWindow::setFullScreen(bool newFullScreen) {
@@ -235,6 +241,8 @@ namespace RT64 {
         } else {
             SDL_SetWindowFullscreen(windowHandle, 0);
         }
+        fullScreen = newFullScreen;
+#   elif defined(__SWITCH__)
         fullScreen = newFullScreen;
 #   endif
     }
@@ -331,6 +339,8 @@ namespace RT64 {
         XRRFreeScreenResources(screenResources);
 #   elif defined(__APPLE__)
         refreshRate = windowWrapper->getRefreshRate();
+#   elif defined(__SWITCH__)
+        refreshRate = 60;
 #   endif
     }
 
@@ -359,6 +369,9 @@ namespace RT64 {
         windowWrapper->getWindowAttributes(&attributes);
         newWindowLeft = attributes.x;
         newWindowTop = attributes.y;
+#   elif defined(__SWITCH__)
+        newWindowLeft = 0;
+        newWindowTop = 0;
 #   endif
 
         if ((windowLeft != newWindowLeft) || (windowTop != newWindowTop)) {

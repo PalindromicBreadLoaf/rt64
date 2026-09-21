@@ -47,6 +47,8 @@ namespace RT64 {
         pthread_setname_np(pthread_self(), str.c_str());
 #   elif defined(__APPLE__)
         pthread_setname_np(str.c_str());
+#   elif defined(__SWITCH__)
+        (void)str;
 #   else
         static_assert(false, "Unimplemented");
 #   endif
@@ -60,6 +62,8 @@ namespace RT64 {
         // that are available without root privileges are lower priority. Instead you can set the thread's "nice" value, which ranges
         // from -20 to 19 (lower being higher priority). However, by strict POSIX spec "nice" is meant to be per-process instead of
         // per-thread. Therefore to avoid issues in case Linux is modified to match the spec in the future, this function does nothing.
+        (void)priority;
+#   elif defined(__SWITCH__)
         (void)priority;
 #   else
         static_assert(false, "Unimplemented");

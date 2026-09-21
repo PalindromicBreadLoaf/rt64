@@ -8,7 +8,7 @@
 
 #if defined(_WIN32)
 #   include <Windows.h>
-#else
+#elif !defined(__SWITCH__)
 #   include <sys/mman.h>
 #endif
 
@@ -19,6 +19,9 @@ namespace RT64 {
         HANDLE fileMappingHandle = nullptr;
         LPVOID fileView = nullptr;
         LARGE_INTEGER fileSize = {};
+#elif defined(__SWITCH__)
+        void *fileView = nullptr;
+        size_t fileSize = 0;
 #else
         int fileHandle = -1;
         void *fileView = MAP_FAILED;

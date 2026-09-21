@@ -5,10 +5,14 @@
 #include "rt64_mapped_file.h"
 
 #if !defined(_WIN32)
+#   include <cerrno>
+#   include <cstdlib>
 #   include <cstring>
 #   include <cstdio>
-#   include <fcntl.h>
-#   include <unistd.h>
+#   if !defined(__SWITCH__)
+#      include <fcntl.h>
+#      include <unistd.h>
+#   endif
 #endif
 
 namespace RT64 {
@@ -33,6 +37,8 @@ namespace RT64 {
         if (fileHandle != nullptr) {
             CloseHandle(fileHandle);
         }
+#   elif defined(__SWITCH__)
+        free(fileView);
 #   else
         if (fileView != MAP_FAILED) {
             munmap(fileView, fileSize);
@@ -80,6 +86,41 @@ namespace RT64 {
         }
 
         return true;
+#   elif defined(__SWITCH__)
+        FILE *file = fopen(path.c_str(), "rb");
+        if (file == nullptr) {
+            fprintf(stderr, "fopen for %s failed with error %s.\n", path.c_str(), strerror(errno));
+            return false;
+        }
+
+        fseek(file, 0, SEEK_END);
+        const long fileEnd = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        if (fileEnd <= 0) {
+            fprintf(stderr, "ftell for %s failed with error %s.\n", path.c_str(), strerror(errno));
+            fclose(file);
+            return false;
+        }
+
+        fileView = malloc(size_t(fileEnd));
+        if (fileView == nullptr) {
+            fprintf(stderr, "Unable to allocate %ld bytes for %s.\n", fileEnd, path.c_str());
+            fclose(file);
+            return false;
+        }
+
+        fileSize = fread(fileView, 1, size_t(fileEnd), file);
+        fclose(file);
+
+        if (fileSize != size_t(fileEnd)) {
+            fprintf(stderr, "fread for %s read %zu of %ld bytes.\n", path.c_str(), fileSize, fileEnd);
+            free(fileView);
+            fileView = nullptr;
+            fileSize = 0;
+            return false;
+        }
+
+        return true;
 #   else
         fileHandle = ::open(path.c_str(), O_RDONLY);
         if (fileHandle == -1) {
@@ -108,7 +149,7 @@ namespace RT64 {
     }
 
     bool MappedFile::isOpen() const {
-#   if defined(_WIN32)
+#   if defined(_WIN32) || defined(__SWITCH__)
         return (fileView != nullptr);
 #   else
         return (fileView != MAP_FAILED);
