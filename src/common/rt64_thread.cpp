@@ -12,6 +12,8 @@
 #   include "utf8conv/utf8conv.h"
 #elif defined(__linux__)
 #   include <pthread.h>
+#elif defined(__SWITCH__)
+#   include <switch.h>
 #endif
 
 namespace RT64 {
@@ -37,6 +39,30 @@ namespace RT64 {
     }
 #   endif
 
+#   if defined(__SWITCH__)
+    extern "C" __attribute__((weak)) void rt64_switch_place_thread(const char *name);
+
+    static u32 toHorizonPriority(Thread::Priority priority) {
+        switch (priority) {
+        case Thread::Priority::Idle:
+            return 0x3B;
+        case Thread::Priority::Lowest:
+            return 0x32;
+        case Thread::Priority::Low:
+            return 0x30;
+        case Thread::Priority::Normal:
+            return 0x2C;
+        case Thread::Priority::High:
+            return 0x2A;
+        case Thread::Priority::Highest:
+            return 0x28;
+        default:
+            assert(false && "Unknown thread priority.");
+            return 0x2C;
+        }
+    }
+#   endif
+
     // Thread
 
     void Thread::setCurrentThreadName(const std::string &str) {
@@ -48,7 +74,9 @@ namespace RT64 {
 #   elif defined(__APPLE__)
         pthread_setname_np(str.c_str());
 #   elif defined(__SWITCH__)
-        (void)str;
+        if (rt64_switch_place_thread != nullptr) {
+            rt64_switch_place_thread(str.c_str());
+        }
 #   else
         static_assert(false, "Unimplemented");
 #   endif
@@ -64,7 +92,7 @@ namespace RT64 {
         // per-thread. Therefore to avoid issues in case Linux is modified to match the spec in the future, this function does nothing.
         (void)priority;
 #   elif defined(__SWITCH__)
-        (void)priority;
+        svcSetThreadPriority(CUR_THREAD_HANDLE, toHorizonPriority(priority));
 #   else
         static_assert(false, "Unimplemented");
 #   endif
