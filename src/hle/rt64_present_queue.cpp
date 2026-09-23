@@ -39,15 +39,12 @@ namespace RT64 {
         int nextWriteCursor = (writeCursor + 1) % presents.size();
 
         // Stall the thread until the barrier is lifted if we're trying to write on a present being used by the GPU.
-        bool waitForBarrier;
-        do {
-            const std::scoped_lock lock(cursorMutex);
-            waitForBarrier = (nextWriteCursor == barrierCursor);
-        } while (waitForBarrier);
-
-        // Modify the cursor and notify anything waiting on the queue.
         {
-            const std::scoped_lock lock(cursorMutex);
+            std::unique_lock<std::mutex> lock(cursorMutex);
+            cursorCondition.wait(lock, [&]() {
+                return (nextWriteCursor != barrierCursor) || !presentThreadRunning;
+            });
+
             writeCursor = nextWriteCursor;
         }
 
@@ -426,8 +423,12 @@ namespace RT64 {
     }
     
     void PresentQueue::threadAdvanceBarrier() {
-        std::scoped_lock<std::mutex> cursorLock(cursorMutex);
-        barrierCursor = (barrierCursor + 1) % presents.size();
+        {
+            std::scoped_lock<std::mutex> cursorLock(cursorMutex);
+            barrierCursor = (barrierCursor + 1) % presents.size();
+        }
+
+        cursorCondition.notify_all();
     }
 
     void PresentQueue::threadLoop() {

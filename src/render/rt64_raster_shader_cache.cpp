@@ -142,8 +142,14 @@ namespace RT64 {
 
         bool keepWaiting = false;
         do {
-            std::unique_lock<std::mutex> queueLock(descQueueMutex);
-            keepWaiting = (descQueueActiveCount > 0);
+            {
+                std::unique_lock<std::mutex> queueLock(descQueueMutex);
+                keepWaiting = (descQueueActiveCount > 0);
+            }
+
+            if (keepWaiting) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
         } while (keepWaiting);
     }
 
@@ -180,3 +186,4 @@ namespace RT64 {
         return GPUShaders.size();
     }
 };
+
